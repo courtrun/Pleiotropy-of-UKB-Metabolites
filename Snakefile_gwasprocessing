@@ -1,0 +1,88 @@
+# Courtney Smith - BOLT-LMM - Snakemake
+# Goal of script: BOLT-LMM nightingale metabolite GWAS sumstats processing
+
+import pandas
+import os.path
+import glob
+import math
+
+# Set path locations
+DIR="/nightingale/"
+PHENOTYPES_LIST = "rigidmets.txt" #
+gwas = pandas.read_csv(PHENOTYPES_LIST,names=["name"])
+gwas.set_index("name", inplace=True)
+OUTPUT_PATH="/results"
+
+PLINK="plink" # Remember to run ml plink and ml bedtools and ml R/4.0 before starting
+
+shell.executable("/usr/bin/bash")
+shell.prefix("source ~/.bashrc; ")
+
+CHROMS= [str(c) for c in range(1, 23)] # chromosome numbers 1 through 22
+
+# The path used for the clumping
+CLUMP_BED_PATH="1000G_EUR_Phase3_plink/mymerge"
+
+rule all:
+    input:
+        expand("{name}.hits", name=[str(s) for s in gwas.index]),
+        "rigidmets_pruned_matrix_wide.txt"
+    output:
+        "processed_bolt.txt"
+    shell:
+        "echo yay"
+
+rule filter_plink: # filters to MAF 1% and info score >0.7 and merges in the rsIDs
+    input:
+        "/{name}/european_phe_and_remove.biomarkers.imp_stats.gz"
+    output:
+        "/european/filtered/{name}.glm.filtered.maf01.info07.tsv.gz"
+    shell:
+        "Rscript mfs.R {input} {output}"
+
+rule clump_plink: # take strongest associated variant and gets rid of everything else with r2 > 0.01 and within 1 megabase
+    input:
+        "/european/filtered/{name}.glm.filtered.maf01.info07.tsv.gz"
+    output:
+        "/european/clumped/{name}.clumped"
+    shell:
+        "" + PLINK + " --bfile {CLUMP_BED_PATH} --clump {input} --clump-p1 1e-4 --clump-p2 1e-4 --clump-r2 0.01 --clump-kb 1000 --out {params.prefix} --clump-field P_BOLT_LMM --clump-snp-field SNP"
+
+rule hits: # takes clumped file and converts that to a hit file which is in format with columns in original file and filters it to GWAS hits and outputs that as a separate file
+    input:
+        sumstats = "/european/filtered/{name}.glm.filtered.maf01.info07.tsv.gz",
+        clump = "/european/clumped/{name}.clumped"
+    output:
+        all = "/european/hits/{name}.hits",
+        lt5e8 = "/european/hits5e8/{name}.hits"
+    shell:
+        "zgrep -Ff <(awk '{{print $3;}}' {input.clump} |  grep -v '^$' | sed 's/$/\t/') {input.sumstats} > {output.all}; "
+        "awk '($NF < 5e-8 || NR == 1)' {output.all} > {output.lt5e8}"
+
+rule pruned_snplist:
+    input:
+        expand("/european/hits5e8/{name}.hits",name=[str(s) for s in gwas.index])
+    output:
+        txt = "/european/hits5e8/rigidmets_pruned.txt",
+        snpl = "/european/hits5e8/rigidmets_pruned.snplist"
+    shell:
+        "Rscript filtersumstats_toprunedsnps.R {input} {output.txt} {output.snpl}"
+
+rule filter_topruned:
+    input:
+        var = "/european/hits5e8/rigidmets_pruned.snplist",
+        sumstats = "/european/filtered/{name}.glm.filtered.maf01.info07.tsv.gz"
+    output:
+        "/european/filtered/{name}_filtrigidmetpruned.tsv.gz"
+    shell:
+        "zgrep -wFf {input.var} {input.sumstats} | gzip -c > {output}"
+
+rule make_matrix:
+    input:
+        snpl = "/european/hits5e8/rigidmets_pruned.snplist",
+        sumstats = expand("/european/filtered/{name}_filtrigidmetpruned.tsv.gz",name=[str(s) for s in gwas.index])
+    output:
+        long = "/european/hits5e8/rigidmets_pruned_matrix_long.txt",
+        wide = "/european/hits5e8/rigidmets_pruned_matrix_wide.txt"
+    shell:
+        "Rscript make_matrix.R {input.snpl} {input.sumstats} {output.long} {output.wide}"
