@@ -8,5 +8,5 @@ https://drive.google.com/drive/u/2/folders/1KiHjx0uaOnc-rJM4Jph9cCherGcemuem
 
 If anything is unclear, please contact Courtney Smith at courtrun@stanford.edu.
 
-If you use these scripts or data, please cite the above Smith et al. 2022 (bioRxiv) paper and reference this Github repo:
+If you use these scripts or data, please cite the above Smith et al. 2022 (_bioRxiv_) paper and reference this Github repo:
 https://github.com/courtrun/Pleiotropy-of-UKB-Metabolites
