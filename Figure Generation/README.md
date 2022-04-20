@@ -15,3 +15,5 @@ heatmap.R: Plot heatmap and dendogram of sumstats for metabolites vs hits
 pd_modeling_customized.R: Project a given variant's sumstats info onto pathway diagram
 
 plot_reml.R: Local genetic correlation bar plot for alanine vs glutamine pathway regions
+
+Supplement: Folder containing scripts for generating the supplementary figures and tables
