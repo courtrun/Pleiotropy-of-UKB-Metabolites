@@ -19,3 +19,7 @@ mr_export_heterogeneity.R: generate the tabular results for heterogeneity statis
 mr_export_intercepts.R: generate the tabular results for intercepts from MR regressions.
 
 mr_result_processing.R: apply the Rucker model selection framework to identify which MR regression statistics to report.
+
+Conditional Analysis Scripts
+============================
+There are a number of scripts used for the conditional analyses. These scripts and their associated input files are located in the Conditional folder.
